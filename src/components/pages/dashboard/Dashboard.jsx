@@ -12,6 +12,7 @@ import DeleteOutline from '@mui/icons-material/DeleteOutline';
 
 import DashboardJsonEntityView from './DashboardJsonEntityView';
 import DashboardJsonTwinView from './DashboardJsonTwinView';
+import StatusBox from '../../widget/statusBox';
 
 const twin_columns = [
     { field: "id", headerName: "Twin ID", width: 150 },
@@ -153,8 +154,11 @@ export default React.memo(function Dashboard(){
             links.push({source: twin.id, target: "SERVER",value : twin.status==='connect'?1:0});
 
             twin.entities?.forEach(entity=>{
-                nodes.push({id : entity.id ,name : entity.name, type : 2});
-                links.push({source: entity.id, target:  twin.id, value : twin.status==='connect'?1:0});
+                if(entity.enable){
+                    nodes.push({id : entity.id ,name : entity.name, type : 2});
+                    links.push({source: entity.id, target:  twin.id, value : twin.status==='connect'?1:0});
+                }
+
             })
         }
 
@@ -201,6 +205,9 @@ export default React.memo(function Dashboard(){
     return (
         <div className='dashboard'>
             <h1 >Dash Board</h1>
+            {/* <div className='dashboard_top_wrap'>
+                <StatusBox />
+            </div> */}
             <div className='dashboard_wrap top'>
                 <div className='dashboard_wrap_item'>
                     Twin List
@@ -270,7 +277,7 @@ export default React.memo(function Dashboard(){
                                     }
                                 }}
                                 // .nodeColor(d => d.type=="OK" ? '#4caf50' : '#f44336')
-                                linkDirectionalParticles={"value"}
+                                // linkDirectionalParticles={"value"}
                                 linkDirectionalParticleSpeed={d => d.value * 0.01}
                                /*  backgroundColor="aliceblue" */
                                 /* linkCurveRotation={"rotation"}

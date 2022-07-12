@@ -1,0 +1,26 @@
+.policy{
+    flex:4;
+}
+
+.policyContainer{
+    display: flex;
+    flex-wrap: wrap;
+    /* flex-direction: column; */
+    // flex-direction: column;
+   
+}
+
+.policyCardBackgound{
+    // width: 350px;
+    // flex: 1;
+    background-color: #202026;
+    border-radius: 5px;
+    cursor: pointer;
+    -webkit-box-shadow: 2px 2px 5px 1px #202026;
+    box-shadow: 1px 1px 3px 1px #202026;
+    margin : 5px 5px;
+    padding: 15px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+}

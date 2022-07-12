@@ -20,7 +20,7 @@ const initialState = {
     //web socket data
     twin_infos: {},
     event_logs: [],
-    socket_status :'disconnect'
+    socket_status: 'disconnect'
 };
 
 const usersHandler = createAsyncHandler('GET_USERS', 'users');
@@ -34,7 +34,7 @@ function timestamp() {
 function usersReducer(state, action) { // 2
 
     switch (action.type) {
-      
+
         case 'GET_USERS':
         case 'GET_USERS_SUCCESS':
         case 'GET_USERS_ERROR':
@@ -82,9 +82,21 @@ function usersReducer(state, action) { // 2
                         event_logs: [...state.event_logs, { id: log_idx++, timestamp: timestamp(), type: type, data: data }]
                     }
 
-                case "ENTITY_ADD": // 엔티티 추가
+                case "TWIN_UPDATE":
+                    return {
+                        ...state,
+                        twin_infos: state.twin_infos.map(twin => {
+                            if (data.id === twin.id) {
+                                return data;
+                            } else {
+                                return twin
+                            }
+                        })
+                    }
+                case "ENTITY_INFO_LIST_UPDATE": // 엔티티 추가
                     //console.log('ENTITY_ADD',data);
-                    state.twin_infos[data.source_id]?.entities.push(data);
+                    console.log('test', data);
+                    state.twin_infos[data.twin_id].entities = data.entity_info_list;
                     return {
                         ...state,
                         twin_infos: { ...state.twin_infos },

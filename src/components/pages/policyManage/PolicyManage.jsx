@@ -20,7 +20,6 @@ const log_columns = [
 ];
 
 export default function PolicyManage(){
-
        //const {plicyId} = useParams();
     const [state, refetch] = useAsync(()=>getPlicyInfos(), []);
     const { loading, data, error } = state; // state.data 를 users 키워드로 조회
@@ -37,7 +36,7 @@ export default function PolicyManage(){
             
             {/* <div className='policyCardBackgound' style={{height:600,marginTop:7}}>
                     EventLog
-                    <DataGrid
+                    <DeleteOutline
                         rows={[{id:0}]}
                         columns = {log_columns}
                         pageSize = {20}

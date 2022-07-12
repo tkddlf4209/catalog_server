@@ -21,8 +21,10 @@ export default function PolicyManageItem({policy,refetch}){
                 </div>
             </div>
             <div>
-                <img src={require(id ===1?'../../../imgs/policy1.PNG':'../../../imgs/policy2.jpg')} className='policyItemImg' ></img>
-                <div className={enable?'plicyItemRunButton stop':'plicyItemRunButton start'} onClick={async (e)=>{
+                <Link to={`/policyStatus/${id}`} state={{ policy: policy }} >
+                    <img src={require(id ===1?'../../../imgs/policy1.PNG':'../../../imgs/policy2.jpg')} className='policyItemImg' ></img>
+                 </Link>
+                 <div className={enable?'plicyItemRunButton stop':'plicyItemRunButton start'} onClick={async (e)=>{
                     
                     var data = await updatePolicy({
                         type : enable?"POLICY_STOP":"POLICY_START",

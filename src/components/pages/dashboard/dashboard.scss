@@ -8,6 +8,11 @@
     margin : 0px 0px;
 }
 
+.dashboard_top_wrap{
+    display: flex;
+    flex-direction: row;
+}
+
 .dashboard_wrap_item{
     flex: 1;
     background-color: #202026;

@@ -18,7 +18,6 @@ export default function PolicySetting(){
     const [policy, setPolicy] = useState(initPolicy);
     const [twinId, setTwinId] = useState(null);
 
-
     const getTwinList = useMemo(()  =>{
         var list = [];
         if(data){
@@ -29,41 +28,81 @@ export default function PolicySetting(){
         return list;
     },[data]);
 
-    const getPropList = useCallback((twin_id)  =>{
-        var list = [];
+
+    const getSelectTwinPropSum = useCallback(()  =>{
+        
+        let list = [];
         // {id : 0, name : "미세먼지", value :10 , target_value : 20},
         if(data){
-            console.log(data.entity_infos);
             for (let [id, entity] of Object.entries(data.entity_infos)) {
-                if(entity.source_id == twin_id){
-                   
+                if(policy.twinIds.includes(entity.source_id)){
                     entity.props.forEach(prop => {
-                        var target_value = policy.targetProps.filter(p => p.id ===prop.id && p.target_value != null)
-                        
-                        var item = {
-                            ...prop,
-                            twinId : twin_id,
-                            entityId: entity.id,
-                            entityName : entity.name, // 객체 이름,
-                            entityType : entity.type, // 객체 타입 
-                            target_value : (target_value.length>0?target_value[0].target_value:null)
+                      
+                        if(prop.prop_id !== 'device_count'){
+                            var target_value = policy.targetProps.filter(p => p.prop_id ===prop.prop_id && p.target_value != null)
+
+                            var item = list.find(item => item.prop_id === prop.prop_id);
+                            if(item){
+                                item.current_value = Number((item.current_value +prop.value).toFixed(1));
+                            }else{
+                                list.push({
+                                    id : prop.prop_id,
+                                    prop_id : prop.prop_id,
+                                    prop_name : prop.name,
+                                    current_value : prop.value,
+                                    target_value : (target_value.length>0?target_value[0].target_value:null)
+                                });
+                            }
                         }
-                        list.push(item);
+
+
                     });
                 }
             }
         }
         return list;
-    },[data]);
+    },[data,policy]);
+
+
+    // const getPropList = useCallback((twin_id)  =>{
+    //     var list = [];
+    //     // {id : 0, name : "미세먼지", value :10 , target_value : 20},
+    //     if(data){
+    //         for (let [id, entity] of Object.entries(data.entity_infos)) {
+    //             if(entity.source_id === twin_id && entity.enable){
+                   
+    //                 entity.props.forEach(prop => {
+    //                     var target_value = policy.targetProps.filter(p => p.id ===prop.id && p.target_value != null)
+                        
+    //                     // if(entity.type=="relation"){
+    //                     //     prop.min = 1;
+    //                     //     prop.max = 2;
+    //                     // }
+
+    //                     var item = {
+    //                         ...prop,
+    //                         twinId : twin_id,
+    //                         entityId: entity.id,
+    //                         entityName : entity.name, // 객체 이름,
+    //                         entityType : entity.type, // 객체 타입 
+    //                         target_value : (target_value.length>0?target_value[0].target_value:null)
+    //                     }
+    //                     list.push(item);
+    //                 });
+    //             }
+    //         }
+    //     }
+    //     return list;
+    // },[data]);
 
     // policy  ******
-    const getRelationTwinIds = useMemo(()  =>{
-        return policy.twinIds;
-    },[policy]);
+    // const getRelationTwinIds = useMemo(()  =>{
+    //     return policy.twinIds;
+    // },[policy]);
 
-    const getRelationTargetPropIds = useMemo(()  =>{
-        return policy.targetProps.map(prop=> prop.id);
-    },[policy]);
+    // const getRelationTargetPropIds = useMemo(()  =>{
+    //     return policy.targetProps.map(prop=> prop.id);
+    // },[policy]);
 
     const twin_select_columns = [
         { field: "id", headerName: "", width: 20 ,renderCell : (param) =>{
@@ -97,8 +136,16 @@ export default function PolicySetting(){
                 </>
             )
         }}, 
-        { field: "name", headerName: "name", width: 150 },
-        { field: "status", headerName: "Status", width: 100,
+        { field: "name", headerName: "트윈명", width: 100 },
+        { field: "type", headerName: "타입", width: 100 ,
+        renderCell : (param) =>{
+            return (
+                <>
+                    <p >{param.row.type===1?'제조':'에너지'}</p>
+                </>
+            )
+        }},
+        { field: "status", headerName: "연결상태", width: 100,
         renderCell : (param) =>{
             return (
                 <>
@@ -106,39 +153,56 @@ export default function PolicySetting(){
                 </>
             )
         }},
-        { field: "tag", headerName: "tag", width: 150 }
+        { field: "tag", headerName: "태그", width: 150 }
     ];
     
     const prop_select_columns = [
         { field: "id", headerName: "", width: 50 ,renderCell : (param) =>{
             return (
                 <>
-                    <input type="checkbox" checked={policy.targetProps.some(prop=> prop.id ===param.row.id)?true:false} onChange={(e)=>{
+                    <input type="checkbox" checked={policy.targetProps.some(prop=> prop.prop_id ===param.row.prop_id)?true:false} onChange={(e)=>{
                         
                          if(e.target.checked){
                              // 추가되어있지 않으면 추가
-                             if(!policy.targetProps.some(prop=> prop.id ===param.row.id)){
+                             if(!policy.targetProps.some(prop=> prop.prop_id ===param.row.prop_id)){
                                 param.row.target_value = param.row.value;
-
                                 policy.targetProps.push(param.row)
-                                
                                 setPolicy({...policy})
                              }
                          }else{
-                            policy.targetProps = policy.targetProps.filter(prop => prop.id !==param.row.id);
+                            policy.targetProps = policy.targetProps.filter(prop => prop.prop_id !==param.row.prop_id);
                             setPolicy({...policy})
                          }
                     }} />
                 </>
             )
         }},
-        { field: "entityName", headerName: "entityName", width: 150 },
-        { field: "entityType", headerName: "entityType", width: 150 },
-        { field: "prop_id", headerName: "propId", width: 150 },
-        { field: "name", headerName: "name", width: 150 },
-        { field: "target_value", headerName: "target_value", width: 150 ,editable: true,type: 'number',
+        // { field: "entityName", headerName: "객체명", width: 100 },
+        // { field: "entityType", headerName: "entityType", width: 100 },
+        // { field: "prop_id", headerName: "propId", width: 150 },
+        { field: "prop_id", headerName: "Prop ID", width: 150 },
+        { field: "prop_name", headerName: "Prop Name", width: 150 },
+        { field: "current_value", headerName: "현재값(누적)", width: 150 },
+        // { field: "range", headerName: "설정 범위", width: 150 ,
+        // renderCell : (param) =>{
+        //     if(param.row.max !==undefined){
+        //         return (
+        //             <>
+        //                 <p >{param.row.min}~{param.row.max}</p>
+        //             </>
+        //         )
+        //     }else{
+        //         return (
+        //             <>
+        //                <p>-</p>
+        //             </>
+        //         )
+        //     }
+            
+        // }},
+        { field: "target_value", headerName: "목표값", width: 100 ,editable: true,type: 'number',
         renderCell : (param) =>{
-            var selected = policy.targetProps?.some((prop)=>param.row.id===prop.id);
+            var selected = policy.targetProps?.some((prop)=>param.row.prop_id === prop.prop_id);
             return (
                 <>
                     <p >{selected?param.row.target_value:''}</p>
@@ -197,7 +261,7 @@ export default function PolicySetting(){
                         }}
                         onSelectionModelChange ={(ids)=>{
                             setPolicy((policy)=>{
-                                return {...policy,twinids:ids}
+                                return {...policy,twinIds:ids}
                             })
                             setTwinId(ids[0])
                             // setTwinSelectId(ids[0]);
@@ -206,8 +270,43 @@ export default function PolicySetting(){
 
                 </div>
                 <div className='policySettingRight'>
-                    Props {data?.twin_infos[twinId]?.name}
+                    
+                    Select Twin Prop Info (SUM)
                     <DataGrid
+                        rows={getSelectTwinPropSum()}
+                        columns = {prop_select_columns}
+                        // pageSize = {20}
+                        // checkboxSelection
+                        checkboxSelection={false}
+                        hideFooter
+                        disableSelectionOnClick
+                        onRowClick={(param)=>{
+                            //nodeFocusTableHandler(param.row);
+                            //console.log(JSON.stringify(param.row));
+                        }}
+                        
+                        isCellEditable={(param) => {
+                            return policy.targetProps.some(prop=> prop.prop_id ===param.row.prop_id);
+                        }}
+
+                        onCellEditCommit={(param)=>{
+                            policy.targetProps = policy.targetProps.map(prop => {
+                               if(prop.prop_id ===param.id){
+                                   //console.log(prop.prop_id,param.id,param.value);
+                                   prop.target_value = param.value;
+                                  
+                               }
+
+                               return prop
+                            });
+
+                            //console.log(policy);
+                            setPolicy({...policy})
+                        }}
+                    />
+
+                    {/* Props {data?.twin_infos[twinId]?.name} */}
+                    {/* <DataGrid
                         rows={getPropList(twinId)}
                         columns = {prop_select_columns}
                         // pageSize = {20}
@@ -233,7 +332,7 @@ export default function PolicySetting(){
                             });
                             setPolicy({...policy})
                         }}
-                    />
+                    /> */}
                    
                 </div>
             </div>
