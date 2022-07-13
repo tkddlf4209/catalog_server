@@ -20,12 +20,14 @@ let policy_infos = {
     1: {
         id: 1,
         title: '미세먼지 계절관리제',
-        enable: true, // 시작상태
+        enable: false, // 시작상태
         duration: 1000, // 주기
         startTime: "",
         endTime: "",
         twinIds: [],// 연합 참여 트윈
-        targetProps: [] // 연협 실행 시 타겟 프로퍼티 설정 값 리스트
+        finishTwinIds: {}, //  정책 완료 트윈
+        targetProps: [], // 연협 실행 시 타겟 프로퍼티 설정 값 리스트
+
     }
     // 2: {
     //     id: 2,
@@ -102,6 +104,163 @@ function makePolicyTwinConfigs(policy) {
 
 
 }
+async function startPolicy(id) {
+    // var other_policy_run = Object.keys(policy_infos).map(key => policy_infos[key]).filter(policy => policy.id !== data.id && policy.enable === true)
+
+    // if (other_policy_run.length == 0) {
+    //     policy_infos = {
+    //         ...policy_infos,
+    //         [data.id]: {
+    //             ...policy_infos[data.id],
+    //             enable: true
+    //         }
+    //     }
+    //     res.send(JSON.stringify({
+    //         result: "OK"
+    //     }))
+    // } else {
+    //     res.send(JSON.stringify({
+    //         error: "다른 정책이 실행 중입니다.\n(정지 후 다시 시도해주세요)"
+    //     }))
+    // }
+
+    let finishTwinIds = {};
+    policy_infos[id].twinIds.forEach(twin_id => {
+        if (twin_infos[twin_id].status === 'connect') {
+            finishTwinIds[twin_id] = false
+        }
+    })
+
+    policy_infos = {
+        ...policy_infos,
+        [id]: {
+            ...policy_infos[id],
+            enable: true,
+            finishTwinIds: finishTwinIds // 접속중인 트윈에 대해서 완료 상태를 초기화 (false)
+        },
+
+    }
+
+    // 실행한 정책 정보 가져오기
+    var policy = policy_infos[id];
+    // 정책에 연합중인 트윈의 모표 값을 계산
+    let policyConfigs = makePolicyTwinConfigs(policy);
+
+    var keys = Object.keys(twin_infos);
+    for (var i = 0; i < keys.length; i++) {
+        let twin_info = twin_infos[keys[i]];
+        try {
+
+            // 실행정책에 해당 트윈이 포함되어있는지 파악 
+
+            if (policy.twinIds.includes(twin_info.id)) {
+                // console.log('ttttttt', twin_info.id, policyConfigs, policyConfigs[twin_info.id]);
+                // 정책 실행 요청
+                let response = await axios.put( // delte , put 구분하기!
+                    twin_info.server_url + "/policyExcute",
+                    {
+                        type: 'start',
+                        policy_info: {
+                            ...policy,
+                            policy_config: policyConfigs[twin_info.id]
+                        }
+                    }
+                );
+
+                // 
+                if (response) { // 응답으로 트윈 정보가 넘어온다.
+                    twin_info[twin_info.id] = response.data;
+                }
+
+            } else {
+                // 정책에 관련되지 않은 트윈들은 정책 삭제를 요청
+                let response = await axios.put( // 
+                    twin_info.server_url + "/policyDelete",
+                    {
+                        policy_info: {
+                            ...policy
+                        }
+                    }
+                );
+
+                if (response) {
+                    twin_info[twin_info.id] = response.data;
+                }
+            }
+
+
+            // let response = await axios.put(
+            //     twin_info.server_url + "/policyStart",
+            //     {
+            //         policyId: data.id
+            //     }
+            // );
+
+            // console.log('ttttttt', response);
+            // if (response.data) { // 응답으로 트윈 정보가 넘어온다.
+            //     twin_info[response.data.id] = response.data;
+            // }
+
+        } catch (e) {
+            console.log(e.message);
+        }
+    }
+}
+async function stopPolicy(id) {
+    policy_infos = {
+        ...policy_infos,
+        [id]: {
+            ...policy_infos[id],
+            enable: false,
+
+        }
+    }
+
+    var keys = Object.keys(twin_infos);
+    for (var i = 0; i < keys.length; i++) {
+        let twin_info = twin_infos[keys[i]];
+        try {
+
+            var policy = policy_infos[id];
+
+            if (policy.twinIds.includes(twin_info.id)) {
+                let response = await axios.put( // delte , put 구분하기!
+                    twin_info.server_url + "/policyExcute",
+                    {
+                        type: 'stop',
+                        policy_info: {
+                            ...policy
+                        }
+                    }
+                );
+
+                if (response) { // 응답으로 트윈 정보가 넘어온다.
+                    twin_info[twin_info.id] = response.data;
+                }
+
+            } else {
+                // 정책에 관련되지 않은 트윈들은 정책 삭제를 요청
+                let response = await axios.put( // 
+                    twin_info.server_url + "/policyDelete",
+                    {
+                        policy_info: {
+                            ...policy
+                        }
+                    }
+                );
+
+                if (response) {
+                    twin_info[twin_info.id] = response.data;
+                }
+            }
+
+
+        } catch (e) {
+            console.log(e.message);
+        }
+
+    }
+}
 
 async function startServer() {
     app.use(express.urlencoded({ extended: true }));
@@ -175,7 +334,7 @@ async function startServer() {
         //var all_twin_counts = Object.keys(twin_infos).length;
         //var con_twins_count = Object.keys(twin_infos).filter(key => twin_infos[key].status === "connect").length;
         //var run_policy_info = Object.keys(policy_infos).map(key => policy_infos[key]).filter(policy => policy.enable === true)
-        console.log(entity_infos);
+        //console.log(entity_infos);
         res.send(JSON.stringify({
             twin_infos: twin_infos, // 전체트윈 수 / 연결상태 수 조회
             policy_infos: policy_infos, // 정책 수 / 현재 동작 정책 상태 조회
@@ -192,97 +351,8 @@ async function startServer() {
 
         switch (type) {
             case "POLICY_START": // 정책 시작
-                // var other_policy_run = Object.keys(policy_infos).map(key => policy_infos[key]).filter(policy => policy.id !== data.id && policy.enable === true)
 
-                // if (other_policy_run.length == 0) {
-                //     policy_infos = {
-                //         ...policy_infos,
-                //         [data.id]: {
-                //             ...policy_infos[data.id],
-                //             enable: true
-                //         }
-                //     }
-                //     res.send(JSON.stringify({
-                //         result: "OK"
-                //     }))
-                // } else {
-                //     res.send(JSON.stringify({
-                //         error: "다른 정책이 실행 중입니다.\n(정지 후 다시 시도해주세요)"
-                //     }))
-                // }
-
-                policy_infos = {
-                    ...policy_infos,
-                    [data.id]: {
-                        ...policy_infos[data.id],
-                        enable: true
-                    }
-                }
-
-                // 실행한 정책 정보 가져오기
-                var policy = policy_infos[data.id];
-                // 정책에 연합중인 트윈의 모표 값을 계산
-                let policyConfigs = makePolicyTwinConfigs(policy);
-
-                var keys = Object.keys(twin_infos);
-                for (var i = 0; i < keys.length; i++) {
-                    let twin_info = twin_infos[keys[i]];
-                    try {
-
-                        // 실행정책에 해당 트윈이 포함되어있는지 파악 
-
-                        if (policy.twinIds.includes(twin_info.id)) {
-                            console.log('ttttttt', twin_info.id, policyConfigs, policyConfigs[twin_info.id]);
-                            // 정책 실행 요청
-                            let response = await axios.put( // delte , put 구분하기!
-                                twin_info.server_url + "/policyExcute",
-                                {
-                                    type: 'start',
-                                    policy_info: {
-                                        ...policy,
-                                        policy_config: policyConfigs[twin_info.id]
-                                    }
-                                }
-                            );
-
-                            // 
-                            if (response) { // 응답으로 트윈 정보가 넘어온다.
-                                twin_info[twin_info.id] = response.data;
-                            }
-
-                        } else {
-                            // 정책에 관련되지 않은 트윈들은 정책 삭제를 요청
-                            let response = await axios.put( // 
-                                twin_info.server_url + "/policyDelete",
-                                {
-                                    policy_info: {
-                                        ...policy
-                                    }
-                                }
-                            );
-
-                            if (response) {
-                                twin_info[twin_info.id] = response.data;
-                            }
-                        }
-
-
-                        // let response = await axios.put(
-                        //     twin_info.server_url + "/policyStart",
-                        //     {
-                        //         policyId: data.id
-                        //     }
-                        // );
-
-                        // console.log('ttttttt', response);
-                        // if (response.data) { // 응답으로 트윈 정보가 넘어온다.
-                        //     twin_info[response.data.id] = response.data;
-                        // }
-
-                    } catch (e) {
-                        console.log(e.message);
-                    }
-                }
+                startPolicy(data.id);
 
                 res.send(JSON.stringify({
                     result: "OK"
@@ -290,59 +360,7 @@ async function startServer() {
 
                 return;
             case "POLICY_STOP": // 정책 중지
-                policy_infos = {
-                    ...policy_infos,
-                    [data.id]: {
-                        ...policy_infos[data.id],
-                        enable: false
-                    }
-                }
-
-                var keys = Object.keys(twin_infos);
-                for (var i = 0; i < keys.length; i++) {
-                    let twin_info = twin_infos[keys[i]];
-                    try {
-
-                        var policy = policy_infos[data.id];
-
-                        if (policy.twinIds.includes(twin_info.id)) {
-                            let response = await axios.put( // delte , put 구분하기!
-                                twin_info.server_url + "/policyExcute",
-                                {
-                                    type: 'stop',
-                                    policy_info: {
-                                        ...policy
-                                    }
-                                }
-                            );
-
-                            if (response) { // 응답으로 트윈 정보가 넘어온다.
-                                twin_info[twin_info.id] = response.data;
-                            }
-
-                        } else {
-                            // 정책에 관련되지 않은 트윈들은 정책 삭제를 요청
-                            let response = await axios.put( // 
-                                twin_info.server_url + "/policyDelete",
-                                {
-                                    policy_info: {
-                                        ...policy
-                                    }
-                                }
-                            );
-
-                            if (response) {
-                                twin_info[twin_info.id] = response.data;
-                            }
-                        }
-
-
-                    } catch (e) {
-                        console.log(e.message);
-                    }
-
-                }
-
+                stopPolicy(data.id);
 
                 res.send(JSON.stringify({
                     result: "OK"
@@ -415,7 +433,7 @@ async function startServer() {
 
             // - 트윈이 연결되면 트윈정보와 트윈이 가지고있는 객체 정보를 전달한다.
             socket.on("twin_connect", ({ twin_info, entity_info_list }) => {
-                twin_info.status = "connect";
+                //twin_info.status = "connect";
 
                 //갱신
                 twin_infos[twin_info.id] = twin_info;
@@ -494,6 +512,39 @@ async function startServer() {
                 }
 
             })
+
+            socket.on("policy_start", ({ twin_info }) => {
+                twin_infos[twin_info.id] = twin_info;
+            })
+
+            socket.on("policy_stop", ({ twin_info }) => {
+                twin_infos[twin_info.id] = twin_info;
+            })
+
+            socket.on("policy_finish", ({ twin_info, policy_info }) => {
+                twin_infos[twin_info.id] = twin_info;
+
+                let policy = policy_infos[policy_info.id];
+                if (policy && policy.finishTwinIds) {
+                    policy.finishTwinIds[twin_info.id] = true;
+
+                    console.log('check!!', policy.finishTwinIds);
+
+                    // check finish
+                    let all_finish = true;
+                    Object.keys(policy.finishTwinIds).forEach(key => {
+                        all_finish &= policy.finishTwinIds[key]
+                    })
+                    if (all_finish) {
+                        console.log('all finish####');
+
+                        stopPolicy(policy.id)
+                    }
+                }
+
+                console.log('policy_finish');
+            })
+
 
             socket.on("disconnect", () => {
                 if (twin_infos[socket.twin_id]) {

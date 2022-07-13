@@ -37,7 +37,6 @@ export default function PolicySetting(){
             for (let [id, entity] of Object.entries(data.entity_infos)) {
                 if(policy.twinIds.includes(entity.source_id)){
                     entity.props.forEach(prop => {
-                      
                         if(prop.prop_id !== 'device_count'){
                             var target_value = policy.targetProps.filter(p => p.prop_id ===prop.prop_id && p.target_value != null)
 

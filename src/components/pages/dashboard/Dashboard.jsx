@@ -12,7 +12,6 @@ import DeleteOutline from '@mui/icons-material/DeleteOutline';
 
 import DashboardJsonEntityView from './DashboardJsonEntityView';
 import DashboardJsonTwinView from './DashboardJsonTwinView';
-import StatusBox from '../../widget/statusBox';
 
 const twin_columns = [
     { field: "id", headerName: "Twin ID", width: 150 },
